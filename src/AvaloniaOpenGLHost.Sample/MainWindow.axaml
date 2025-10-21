@@ -25,9 +25,9 @@
                            Margin="0,8,0,0">
                     <Run Text="• NativeControlHostを使用してネイティブウィンドウハンドルを取得" />
                     <LineBreak />
-                    <Run Text="• Avalonia内部のOpenGL/Skiaとは完全に独立した別スレッドで描画" />
+                    <Run Text="• Avalonia内部のOpenGLとは完全に独立した別スレッドで描画" />
                     <LineBreak />
-                    <Run Text="• 回転する三角形がレンダリングされています" />
+                    <Run Text="• SkiaSharpを用いた共通描画ロジックで回転する図形を描画" />
                 </TextBlock>
             </StackPanel>
         </Border>

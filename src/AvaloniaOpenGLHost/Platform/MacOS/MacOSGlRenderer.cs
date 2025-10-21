@@ -6,13 +6,12 @@ namespace AvaloniaOpenGLHost.Platform.MacOS;
 /// <summary>
 /// macOS プラットフォーム向けの OpenGL レンダラー
 /// </summary>
-public class MacOSGlRenderer : GlRendererBase
+public class MacOSGlRenderer : SkiaGlRendererBase
 {
     private IntPtr _nsView;
     private IntPtr _nsOpenGLContext;
-    private float _rotation = 0f;
 
-    protected override void PlatformInitialize(IntPtr windowHandle)
+    protected override void CreateContext(IntPtr windowHandle)
     {
         _nsView = windowHandle;
 
@@ -36,7 +35,7 @@ public class MacOSGlRenderer : GlRendererBase
         CocoaInterop.SendMessage(_nsOpenGLContext, "setView:", _nsView);
     }
 
-    protected override void PlatformCleanup()
+    protected override void DestroyContext()
     {
         if (_nsOpenGLContext != IntPtr.Zero)
         {
@@ -44,54 +43,32 @@ public class MacOSGlRenderer : GlRendererBase
             CocoaInterop.SendMessage(_nsOpenGLContext, "release");
             _nsOpenGLContext = IntPtr.Zero;
         }
+
+        _nsView = IntPtr.Zero;
     }
 
-    protected override void PlatformResize(int width, int height)
+    protected override void MakeCurrent()
     {
-        if (width <= 0 || height <= 0)
-            return;
+        if (_nsOpenGLContext == IntPtr.Zero)
+            throw new InvalidOperationException("NSOpenGLContext is not initialised.");
 
-        // コンテキストをアクティブ化
         CocoaInterop.SendMessage(_nsOpenGLContext, "makeCurrentContext");
-
-        // ビューポートを設定
-        CocoaInterop.glViewport(0, 0, width, height);
-
-        // コンテキストを更新
-        CocoaInterop.SendMessage(_nsOpenGLContext, "update");
     }
 
-    protected override void PlatformRender()
+    protected override void SwapBuffers()
     {
-        // コンテキストをアクティブ化
-        CocoaInterop.SendMessage(_nsOpenGLContext, "makeCurrentContext");
+        if (_nsOpenGLContext != IntPtr.Zero)
+        {
+            CocoaInterop.glFlush();
+            CocoaInterop.SendMessage(_nsOpenGLContext, "flushBuffer");
+        }
+    }
 
-        // 画面をクリア
-        CocoaInterop.glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
-        CocoaInterop.glClear(CocoaInterop.GL_COLOR_BUFFER_BIT | CocoaInterop.GL_DEPTH_BUFFER_BIT);
-
-        // 回転する三角形を描画
-        _rotation += 1.0f;
-        CocoaInterop.glRotatef(_rotation, 0f, 0f, 1f);
-
-        CocoaInterop.glBegin(CocoaInterop.GL_TRIANGLES);
-
-        // 赤
-        CocoaInterop.glColor3f(1.0f, 0.0f, 0.0f);
-        CocoaInterop.glVertex3f(0.0f, 0.5f, 0.0f);
-
-        // 緑
-        CocoaInterop.glColor3f(0.0f, 1.0f, 0.0f);
-        CocoaInterop.glVertex3f(-0.5f, -0.5f, 0.0f);
-
-        // 青
-        CocoaInterop.glColor3f(0.0f, 0.0f, 1.0f);
-        CocoaInterop.glVertex3f(0.5f, -0.5f, 0.0f);
-
-        CocoaInterop.glEnd();
-
-        // バッファをフラッシュ
-        CocoaInterop.glFlush();
-        CocoaInterop.SendMessage(_nsOpenGLContext, "flushBuffer");
+    protected override void OnAfterResize(int width, int height)
+    {
+        if (_nsOpenGLContext != IntPtr.Zero)
+        {
+            CocoaInterop.SendMessage(_nsOpenGLContext, "update");
+        }
     }
 }
