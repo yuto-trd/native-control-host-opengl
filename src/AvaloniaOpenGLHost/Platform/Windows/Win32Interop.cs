@@ -138,7 +138,7 @@ internal static class Win32Interop
             0, 0, 1, 1,
             parentHwnd,
             IntPtr.Zero,
-            GetModuleHandle(null),
+            GetModuleHandle(null!),
             IntPtr.Zero);
 
         if (hwnd == IntPtr.Zero)
