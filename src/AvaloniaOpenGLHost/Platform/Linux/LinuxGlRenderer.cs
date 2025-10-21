@@ -6,14 +6,13 @@ namespace AvaloniaOpenGLHost.Platform.Linux;
 /// <summary>
 /// Linux (X11) プラットフォーム向けの OpenGL レンダラー
 /// </summary>
-public class LinuxGlRenderer : GlRendererBase
+public class LinuxGlRenderer : SkiaGlRendererBase
 {
     private IntPtr _display;
     private IntPtr _window;
     private IntPtr _glxContext;
-    private float _rotation = 0f;
 
-    protected override void PlatformInitialize(IntPtr windowHandle)
+    protected override void CreateContext(IntPtr windowHandle)
     {
         _window = windowHandle;
 
@@ -46,7 +45,7 @@ public class LinuxGlRenderer : GlRendererBase
             throw new InvalidOperationException("Failed to create GLX context");
     }
 
-    protected override void PlatformCleanup()
+    protected override void DestroyContext()
     {
         if (_glxContext != IntPtr.Zero && _display != IntPtr.Zero)
         {
@@ -60,50 +59,24 @@ public class LinuxGlRenderer : GlRendererBase
             X11Interop.XCloseDisplay(_display);
             _display = IntPtr.Zero;
         }
+
+        _window = IntPtr.Zero;
     }
 
-    protected override void PlatformResize(int width, int height)
+    protected override void MakeCurrent()
     {
-        if (width <= 0 || height <= 0)
-            return;
+        if (_display == IntPtr.Zero || _window == IntPtr.Zero || _glxContext == IntPtr.Zero)
+            throw new InvalidOperationException("GLX context is not initialised.");
 
-        // このスレッドでコンテキストをアクティブ化
-        X11Interop.glXMakeCurrent(_display, _window, _glxContext);
-
-        // ビューポートを設定
-        X11Interop.glViewport(0, 0, width, height);
+        if (!X11Interop.glXMakeCurrent(_display, _window, _glxContext))
+            throw new InvalidOperationException("Failed to make GLX context current.");
     }
 
-    protected override void PlatformRender()
+    protected override void SwapBuffers()
     {
-        // このスレッドでコンテキストをアクティブ化
-        X11Interop.glXMakeCurrent(_display, _window, _glxContext);
-
-        // 画面をクリア
-        X11Interop.glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
-        X11Interop.glClear(X11Interop.GL_COLOR_BUFFER_BIT | X11Interop.GL_DEPTH_BUFFER_BIT);
-
-        // 回転する三角形を描画
-        _rotation += 1.0f;
-        X11Interop.glRotatef(_rotation, 0f, 0f, 1f);
-
-        X11Interop.glBegin(X11Interop.GL_TRIANGLES);
-
-        // 赤
-        X11Interop.glColor3f(1.0f, 0.0f, 0.0f);
-        X11Interop.glVertex3f(0.0f, 0.5f, 0.0f);
-
-        // 緑
-        X11Interop.glColor3f(0.0f, 1.0f, 0.0f);
-        X11Interop.glVertex3f(-0.5f, -0.5f, 0.0f);
-
-        // 青
-        X11Interop.glColor3f(0.0f, 0.0f, 1.0f);
-        X11Interop.glVertex3f(0.5f, -0.5f, 0.0f);
-
-        X11Interop.glEnd();
-
-        // バッファをスワップ
-        X11Interop.glXSwapBuffers(_display, _window);
+        if (_display != IntPtr.Zero && _window != IntPtr.Zero)
+        {
+            X11Interop.glXSwapBuffers(_display, _window);
+        }
     }
 }

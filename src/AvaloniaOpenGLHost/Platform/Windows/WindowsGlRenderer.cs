@@ -6,14 +6,13 @@ namespace AvaloniaOpenGLHost.Platform.Windows;
 /// <summary>
 /// Windows プラットフォーム向けの OpenGL レンダラー
 /// </summary>
-public class WindowsGlRenderer : GlRendererBase
+public class WindowsGlRenderer : SkiaGlRendererBase
 {
     private IntPtr _hwnd;
     private IntPtr _hdc;
     private IntPtr _hglrc;
-    private float _rotation = 0f;
 
-    protected override void PlatformInitialize(IntPtr windowHandle)
+    protected override void CreateContext(IntPtr windowHandle)
     {
         _hwnd = windowHandle;
 
@@ -48,7 +47,7 @@ public class WindowsGlRenderer : GlRendererBase
             throw new InvalidOperationException("Failed to create OpenGL context");
     }
 
-    protected override void PlatformCleanup()
+    protected override void DestroyContext()
     {
         // コンテキストを解放
         if (_hglrc != IntPtr.Zero)
@@ -63,50 +62,24 @@ public class WindowsGlRenderer : GlRendererBase
             Win32Interop.ReleaseDC(_hwnd, _hdc);
             _hdc = IntPtr.Zero;
         }
+
+        _hwnd = IntPtr.Zero;
     }
 
-    protected override void PlatformResize(int width, int height)
+    protected override void MakeCurrent()
     {
-        if (width <= 0 || height <= 0)
-            return;
+        if (_hdc == IntPtr.Zero || _hglrc == IntPtr.Zero)
+            throw new InvalidOperationException("OpenGL context is not initialised.");
 
-        // このスレッドでコンテキストをアクティブ化
-        Win32Interop.wglMakeCurrent(_hdc, _hglrc);
-
-        // ビューポートを設定
-        Win32Interop.glViewport(0, 0, width, height);
+        if (!Win32Interop.wglMakeCurrent(_hdc, _hglrc))
+            throw new InvalidOperationException("Failed to make OpenGL context current.");
     }
 
-    protected override void PlatformRender()
+    protected override void SwapBuffers()
     {
-        // このスレッドでコンテキストをアクティブ化
-        Win32Interop.wglMakeCurrent(_hdc, _hglrc);
-
-        // 画面をクリア（背景色を設定）
-        Win32Interop.glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
-        Win32Interop.glClear(Win32Interop.GL_COLOR_BUFFER_BIT | Win32Interop.GL_DEPTH_BUFFER_BIT);
-
-        // 回転する三角形を描画
-        _rotation += 1.0f;
-        Win32Interop.glRotatef(_rotation, 0f, 0f, 1f);
-
-        Win32Interop.glBegin(Win32Interop.GL_TRIANGLES);
-
-        // 赤
-        Win32Interop.glColor3f(1.0f, 0.0f, 0.0f);
-        Win32Interop.glVertex3f(0.0f, 0.5f, 0.0f);
-
-        // 緑
-        Win32Interop.glColor3f(0.0f, 1.0f, 0.0f);
-        Win32Interop.glVertex3f(-0.5f, -0.5f, 0.0f);
-
-        // 青
-        Win32Interop.glColor3f(0.0f, 0.0f, 1.0f);
-        Win32Interop.glVertex3f(0.5f, -0.5f, 0.0f);
-
-        Win32Interop.glEnd();
-
-        // バッファをスワップ
-        Win32Interop.SwapBuffers(_hdc);
+        if (_hdc != IntPtr.Zero)
+        {
+            Win32Interop.SwapBuffers(_hdc);
+        }
     }
 }
