@@ -11,6 +11,8 @@
     <PackageReference Include="Avalonia" Version="11.1.3" />
     <PackageReference Include="SkiaSharp" Version="2.88.6" />
     <PackageReference Include="SkiaSharp.Views.Desktop" Version="2.88.6" />
+    <PackageReference Include="SkiaSharp.Vulkan.SharpVk" Version="2.88.6" />
+    <PackageReference Include="SharpVk" Version="1.0.0-dev497" />
   </ItemGroup>
 
 </Project>

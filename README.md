@@ -1,10 +1,10 @@
-# Avalonia Native Control Host with OpenGL
+# Avalonia Native Control Host with OpenGL & Vulkan
 
-AvaloniaのNativeControlHostを使用して、別スレッドの独立したOpenGLコンテキストでレンダリングを行うサンプルプロジェクトです。
+AvaloniaのNativeControlHostを使用して、別スレッドの独立したOpenGL/Vulkanコンテキストでレンダリングを行うサンプルプロジェクトです。
 
 ## 概要
 
-このプロジェクトは、Avalonia内部で使用されているOpenGL/Skiaとは完全に独立した、別スレッドのOpenGLコンテキストを使用してレンダリングを行う方法を示しています。
+このプロジェクトは、Avalonia内部で使用されているOpenGL/Skiaとは完全に独立した、別スレッドのGPUコンテキストを使用してレンダリングを行う方法を示しています。OpenGL と Vulkan の両バックエンドで SkiaSharp を利用するサンプルを含みます。
 
 ### 主な特徴
 
@@ -12,6 +12,7 @@ AvaloniaのNativeControlHostを使用して、別スレッドの独立したOpen
 - **別スレッドレンダリング**: 専用のレンダリングスレッドで60FPSのループを実行
 - **クロスプラットフォーム対応**: Windows、Linux (X11)、macOS をサポート
 - **NativeControlHost使用**: ネイティブウィンドウハンドルを取得して活用
+- **SkiaSharp + Vulkan**: Windows/Linux で SkiaSharp Vulkan バックエンドを利用した描画（プレビュー）
 
 ## アーキテクチャ
 
@@ -29,24 +30,27 @@ AvaloniaのNativeControlHostを使用して、別スレッドの独立したOpen
 src/
 ├── AvaloniaOpenGLHost/           # メインライブラリ
 │   ├── Controls/
-│   │   └── GlHost.cs             # NativeControlHostを継承したメインコントロール
+│   │   ├── GlHost.cs             # OpenGL 用 NativeControlHost
+│   │   └── VulkanHost.cs         # Vulkan 用 NativeControlHost
 │   ├── Rendering/
 │   │   ├── IGlRenderer.cs        # レンダラーインターフェース
 │   │   └── GlRendererBase.cs    # 基底レンダラークラス（スレッド管理）
 │   └── Platform/
 │       ├── Windows/
-│       │   ├── Win32Interop.cs      # Windows P/Invoke定義
-│       │   └── WindowsGlRenderer.cs # Windows実装
+│       │   ├── Win32Interop.cs          # Windows P/Invoke定義
+│       │   ├── WindowsGlRenderer.cs     # Windows OpenGL 実装
+│       │   └── WindowsVulkanRenderer.cs # Windows Vulkan 実装
 │       ├── Linux/
-│       │   ├── X11Interop.cs        # X11/GLX P/Invoke定義
-│       │   └── LinuxGlRenderer.cs   # Linux実装
+│       │   ├── X11Interop.cs            # X11/GLX P/Invoke定義
+│       │   ├── LinuxGlRenderer.cs       # Linux OpenGL 実装
+│       │   └── LinuxVulkanRenderer.cs   # Linux Vulkan 実装
 │       └── MacOS/
 │           ├── CocoaInterop.cs      # Cocoa P/Invoke定義
 │           └── MacOSGlRenderer.cs   # macOS実装
 └── AvaloniaOpenGLHost.Sample/    # サンプルアプリケーション
     ├── Program.cs
     ├── App.axaml
-    ├── MainWindow.axaml          # GlHostを使用するメインウィンドウ
+    ├── MainWindow.axaml          # OpenGL/Vulkan ホストを切り替えるメインウィンドウ
     └── MainWindow.axaml.cs
 ```
 
@@ -55,8 +59,8 @@ src/
 ### 必要な環境
 
 - .NET 8.0 SDK以降
-- Windows: Visual Studio 2022 または .NET SDK
-- Linux: X11 開発ライブラリ (`libX11-dev`, `libGL-dev`)
+- Windows: Visual Studio 2022 または .NET SDK（Vulkan を利用する場合は Vulkan Runtime / SDK が必要）
+- Linux: X11 開発ライブラリ (`libX11-dev`, `libGL-dev`, `libvulkan-dev`)
 - macOS: Xcode Command Line Tools
 
 ### ビルド
@@ -76,7 +80,14 @@ XAML:
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:controls="clr-namespace:AvaloniaOpenGLHost.Controls;assembly=AvaloniaOpenGLHost">
 
-    <controls:GlHost Width="800" Height="600" />
+    <TabControl>
+        <TabItem Header="OpenGL">
+            <controls:GlHost Width="800" Height="600" />
+        </TabItem>
+        <TabItem Header="Vulkan">
+            <controls:VulkanHost Width="800" Height="600" />
+        </TabItem>
+    </TabControl>
 
 </Window>
 ```
@@ -85,15 +96,14 @@ C#:
 ```csharp
 using AvaloniaOpenGLHost.Controls;
 
-// コントロールを作成
-var glHost = new GlHost
+var tabControl = new TabControl
 {
-    Width = 800,
-    Height = 600
+    Items =
+    {
+        new TabItem { Header = "OpenGL", Content = new GlHost { Width = 800, Height = 600 } },
+        new TabItem { Header = "Vulkan", Content = new VulkanHost { Width = 800, Height = 600 } }
+    }
 };
-
-// レイアウトに追加
-myContainer.Children.Add(glHost);
 ```
 
 ## 技術的な詳細
@@ -105,12 +115,14 @@ myContainer.Children.Add(glHost);
 - WGL（Windows OpenGL）を使用
 - `wglCreateContext` でコンテキストを作成
 - `SwapBuffers` でダブルバッファリング
+- Vulkan 版では `VK_KHR_win32_surface` を利用し、SkiaSharp の `GRSharpVkBackendContext` を通じて VkQueue に描画
 
 #### Linux (X11)
 - X11の既存ウィンドウハンドルを使用
 - GLX（OpenGL Extension to X11）を使用
 - `glXCreateContext` でコンテキストを作成
 - `glXSwapBuffers` でダブルバッファリング
+- Vulkan 版では `VK_KHR_xlib_surface` を使用し、SkiaSharp の Vulkan バックエンドで描画
 
 #### macOS
 - NSViewハンドルを使用
