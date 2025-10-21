@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:AvaloniaOpenGLHost.Controls;assembly=AvaloniaOpenGLHost"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+        x:Class="AvaloniaOpenGLHost.Sample.MainWindow"
+        Title="Avalonia Native OpenGL Host Sample"
+        Width="800" Height="600">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- ヘッダー -->
+        <Border Grid.Row="0" Background="#2c3e50" Padding="16">
+            <StackPanel>
+                <TextBlock Text="Avalonia Native OpenGL Host"
+                           FontSize="24"
+                           FontWeight="Bold"
+                           Foreground="White" />
+                <TextBlock Text="別スレッドの独立したOpenGLコンテキストでレンダリング"
+                           FontSize="14"
+                           Foreground="#ecf0f1"
+                           Margin="0,8,0,0" />
+                <TextBlock FontSize="12"
+                           Foreground="#bdc3c7"
+                           Margin="0,8,0,0">
+                    <Run Text="• NativeControlHostを使用してネイティブウィンドウハンドルを取得" />
+                    <LineBreak />
+                    <Run Text="• Avalonia内部のOpenGLとは完全に独立した別スレッドで描画" />
+                    <LineBreak />
+                    <Run Text="• SkiaSharpを用いた共通描画ロジックで回転する図形を描画" />
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- OpenGL レンダリングエリア -->
+        <Border Grid.Row="1"
+                Background="#34495e"
+                Padding="16">
+            <Border BorderBrush="#7f8c8d"
+                    BorderThickness="2"
+                    CornerRadius="8">
+                <controls:GlHost />
+            </Border>
+        </Border>
+    </Grid>
+
+</Window>
