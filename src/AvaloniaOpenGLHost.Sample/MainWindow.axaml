@@ -5,18 +5,18 @@
         xmlns:controls="clr-namespace:AvaloniaOpenGLHost.Controls;assembly=AvaloniaOpenGLHost"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
         x:Class="AvaloniaOpenGLHost.Sample.MainWindow"
-        Title="Avalonia Native OpenGL Host Sample"
+        Title="Avalonia Native GPU Host Sample"
         Width="800" Height="600">
 
     <Grid RowDefinitions="Auto,*">
         <!-- ヘッダー -->
         <Border Grid.Row="0" Background="#2c3e50" Padding="16">
             <StackPanel>
-                <TextBlock Text="Avalonia Native OpenGL Host"
+                <TextBlock Text="Avalonia Native GPU Host"
                            FontSize="24"
                            FontWeight="Bold"
                            Foreground="White" />
-                <TextBlock Text="別スレッドの独立したOpenGLコンテキストでレンダリング"
+                <TextBlock Text="別スレッドの独立したGPUコンテキストでレンダリング"
                            FontSize="14"
                            Foreground="#ecf0f1"
                            Margin="0,8,0,0" />
@@ -25,22 +25,37 @@
                            Margin="0,8,0,0">
                     <Run Text="• NativeControlHostを使用してネイティブウィンドウハンドルを取得" />
                     <LineBreak />
-                    <Run Text="• Avalonia内部のOpenGLとは完全に独立した別スレッドで描画" />
+                    <Run Text="• Avalonia内部とは完全に独立した別スレッドで描画" />
                     <LineBreak />
-                    <Run Text="• SkiaSharpを用いた共通描画ロジックで回転する図形を描画" />
+                    <Run Text="• SkiaSharpを用いた共通描画ロジックをOpenGL/Vulkanで共有" />
                 </TextBlock>
             </StackPanel>
         </Border>
 
-        <!-- OpenGL レンダリングエリア -->
+        <!-- GPU レンダリングエリア -->
         <Border Grid.Row="1"
                 Background="#34495e"
                 Padding="16">
-            <Border BorderBrush="#7f8c8d"
-                    BorderThickness="2"
-                    CornerRadius="8">
-                <controls:GlHost />
-            </Border>
+            <TabControl>
+                <TabItem Header="OpenGL (SkiaSharp)">
+                    <Border BorderBrush="#7f8c8d"
+                            BorderThickness="2"
+                            CornerRadius="8"
+                            Margin="0,8,0,0"
+                            Padding="8">
+                        <controls:GlHost />
+                    </Border>
+                </TabItem>
+                <TabItem Header="Vulkan (SkiaSharp)">
+                    <Border BorderBrush="#7f8c8d"
+                            BorderThickness="2"
+                            CornerRadius="8"
+                            Margin="0,8,0,0"
+                            Padding="8">
+                        <controls:VulkanHost />
+                    </Border>
+                </TabItem>
+            </TabControl>
         </Border>
     </Grid>
 

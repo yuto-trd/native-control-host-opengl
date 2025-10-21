@@ -2,7 +2,7 @@
 
 ## 概要
 
-このプロジェクトは、AvaloniaのNativeControlHostを活用して、Avalonia内部のOpenGL/Skia描画パイプラインとは完全に独立した、別スレッドのOpenGLコンテキストでレンダリングを実現します。
+このプロジェクトは、AvaloniaのNativeControlHostを活用して、Avalonia内部のOpenGL/Skia描画パイプラインとは完全に独立した、別スレッドのGPUコンテキストでレンダリングを実現します。OpenGL に加え、SkiaSharp の Vulkan バックエンドを利用した描画サンプルも提供します。
 
 ## 設計原則
 
@@ -81,9 +81,13 @@ DestroyNativeControlCore()
 リソース解放
 ```
 
+### VulkanHost
+
+`VulkanHost` も `NativeControlHost` を継承し、Windows では `WindowsVulkanRenderer`、Linux では `LinuxVulkanRenderer` を生成します。SkiaSharp の Vulkan バックエンドを扱う `SkiaVulkanRendererBase` を基底にしており、OpenGL 版と同様に別スレッドでレンダリングを実行します。
+
 ### IGlRenderer / GlRendererBase
 
-レンダラーのインターフェースと基底実装。
+レンダラーのインターフェースと基底実装。Vulkan 版では `SkiaVulkanRendererBase` が Vulkan デバイスとスワップチェーンの構築、SkiaSharp との橋渡しを行います。
 
 **GlRendererBaseの責務**:
 - レンダリングスレッドの管理
@@ -134,6 +138,12 @@ PlatformRender()
   - SwapBuffers(): ダブルバッファスワップ
 ```
 
+#### WindowsVulkanRenderer (SkiaSharp)
+
+- `VK_KHR_win32_surface` を用いて `VkSurfaceKHR` を生成
+- SkiaSharp の `GRSharpVkBackendContext` から Vulkan キューへ描画コマンドを送信
+- `SkiaVulkanRendererBase` がスワップチェーンの作成・再生成、レイアウト遷移、SkiaSurface の管理を担当
+
 #### LinuxGlRenderer
 
 **使用技術**: GLX (OpenGL Extension to X11)
@@ -149,6 +159,12 @@ PlatformRender()
   - glClear(), glBegin(), glEnd()等: OpenGL描画
   - glXSwapBuffers(): ダブルバッファスワップ
 ```
+
+#### LinuxVulkanRenderer (SkiaSharp)
+
+- `VK_KHR_xlib_surface` で X11 ウィンドウに紐づくサーフェスを生成
+- SkiaSharp Vulkan バックエンドを用いて共通描画ロジックを実行
+- スワップチェーンやイメージレイアウトの制御は `SkiaVulkanRendererBase` に集約
 
 #### MacOSGlRenderer
 
